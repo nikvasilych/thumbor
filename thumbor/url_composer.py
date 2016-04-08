@@ -31,6 +31,9 @@ def get_parser():
         '-k', '--key', dest='key', default=None, help='The security key to encrypt the url with [default: %default].'
     )
     parser.add_option(
+        '-r', '--rotate', dest='rotate', type='int', default=0, help='The target angle for the image [default: %default].'
+    )
+    parser.add_option(
         '-w', '--width', dest='width', type='int', default=0, help='The target width for the image [default: %default].'
     )
     parser.add_option(
@@ -130,6 +133,7 @@ def get_thumbor_params(image_url, params, config):
         'vertical_flip': params.vertical_flip,
         'halign': params.halign,
         'valign': params.valign,
+        'rotate': params.rotate,
         'trim': params.trim,
         'crop_left': crop_left,
         'crop_top': crop_top,

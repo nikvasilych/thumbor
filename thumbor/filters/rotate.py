@@ -15,6 +15,8 @@ class Filter(BaseFilter):
 
     @filter_method(BaseFilter.Number)
     def rotate(self, value):
-        if value % 90 == 0:
-            value = value % 360  # To optimize for engines
-            self.engine.rotate(value)
+        #moved to transformer
+        # if value % 90 == 0:
+        #     value = value % 360  # To optimize for engines
+        #     self.engine.rotate(value)
+        pass

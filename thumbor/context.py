@@ -90,6 +90,7 @@ class RequestParameters:
     def __init__(self,
                  debug=False,
                  meta=False,
+                 rotate=None,
                  trim=None,
                  crop_left=None,
                  crop_top=None,
@@ -126,6 +127,9 @@ class RequestParameters:
             trim_parts = trim.split(':')
             self.trim_pos = trim_parts[1] if len(trim_parts) > 1 else "top-left"
             self.trim_tolerance = int(trim_parts[2]) if len(trim_parts) > 2 else 0
+
+        if rotate:
+            self.rotate = rotate.split(':')[1]
 
         if crop is not None:
             self.crop = crop

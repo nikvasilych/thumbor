@@ -98,6 +98,7 @@ class Transformer(object):
         self.done_callback = callback
         if self.context.config.RESPECT_ORIENTATION:
             self.engine.reorientate()
+        self.rotate()
         self.trim()
         self.smart_detect()
 
@@ -232,6 +233,12 @@ class Transformer(object):
 
     def extract_cover(self):
         self.engine.extract_cover()
+
+    def rotate(self):
+        rotate = getattr(self.context.request, 'rotate', None)
+        if rotate and ((int(rotate) % 90) == 0):
+            rotate = int(rotate) % 360  # To optimize for engines
+            self.engine.rotate(rotate)
 
     def manual_crop(self):
         if self.context.request.should_crop:
