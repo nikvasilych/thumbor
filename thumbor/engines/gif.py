@@ -6,7 +6,7 @@
 
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license
-# Copyright (c) 2011 globo.com timehome@corp.globo.com
+# Copyright (c) 2011 globo.com thumbor@googlegroups.com
 
 from io import BytesIO
 from PIL import Image
@@ -20,6 +20,10 @@ GIFSICLE_SIZE_REGEX = re.compile(r'(?:logical\sscreen\s(\d+x\d+))')
 GIFSICLE_IMAGE_COUNT_REGEX = re.compile(r'(?:(\d+)\simage)')
 
 
+class GifSicleError(RuntimeError):
+    pass
+
+
 class Engine(PILEngine):
     @property
     def size(self):
@@ -27,7 +31,21 @@ class Engine(PILEngine):
 
     def run_gifsicle(self, command):
         p = Popen([self.context.server.gifsicle_path] + command.split(' '), stdout=PIPE, stdin=PIPE, stderr=PIPE)
-        stdout_data = p.communicate(input=self.buffer)[0]
+        stdout_data, stderr_data = p.communicate(input=self.buffer)
+        if p.returncode != 0:
+            logger.error(stderr_data)
+
+        if stdout_data is None:
+            raise GifSicleError(
+                'gifsicle command returned errorlevel {0} for command "{1}" (image maybe corrupted?)'.format(
+                    p.returncode, ' '.join(
+                        [self.context.server.gifsicle_path] +
+                        command.split(' ') +
+                        [self.context.request.url]
+                    )
+                )
+            )
+
         return stdout_data
 
     def is_multiple(self):
@@ -91,21 +109,29 @@ class Engine(PILEngine):
         self.flush_operations()
         self.update_image_info()
 
-    def flush_operations(self):
+    def flush_operations(self, update_image=True):
         if not self.operations:
-            return
+            return self.buffer
 
-        self.buffer = self.run_gifsicle(" ".join(self.operations))
+        buffer = self.run_gifsicle(" ".join(self.operations))
 
         self.operations = []
 
+        if update_image:
+            self.buffer = buffer
+
+        return buffer
+
     def read(self, extension=None, quality=None):
-        self.flush_operations()
+        return self._read()
+
+    def _read(self, update_image=True):
+        buffer = self.flush_operations(update_image)
 
         # Make sure gifsicle produced a valid gif.
         try:
-            with Image.open(BytesIO(self.buffer)) as image:
-                image.verify()
+            with BytesIO(buffer) as buff:
+                Image.open(buff).verify()
         except Exception:
             self.context.metrics.incr('gif_engine.no_output')
             logger.error("[GIF_ENGINE] invalid gif engine result for url `{url}`.".format(
@@ -113,7 +139,12 @@ class Engine(PILEngine):
             ))
             raise
 
-        return self.buffer
+        return buffer
 
-    def convert_to_grayscale(self):
+    def convert_to_grayscale(self, update_image=True, with_alpha=True):
         self.operations.append('--use-colormap gray')
+        return self._read(update_image)
+
+    # gif have no exif data and thus can't be auto oriented
+    def reorientate(self, override_exif=True):
+        pass

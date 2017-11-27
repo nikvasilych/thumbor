@@ -6,12 +6,17 @@
 
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license
-# Copyright (c) 2011 globo.com timehome@corp.globo.com
+# Copyright (c) 2011 globo.com thumbor@googlegroups.com
 
 import pkgutil
 import pkg_resources
 
 from thumbor import __version__
+
+try:
+    basestring        # Python 2
+except NameError:
+    basestring = str  # Python 3
 
 
 class ErrorHandler(object):
@@ -30,15 +35,12 @@ class ErrorHandler(object):
 
     def get_modules(self):
         resolved = {}
-        modules = [mod[1] for mod in tuple(pkgutil.iter_modules())]
-        for module in modules:
+        for _, module, _ in pkgutil.iter_modules():
             try:
                 res_mod = pkg_resources.get_distribution(module)
                 if res_mod is not None:
                     resolved[module] = res_mod.version
-            except (pkg_resources.DistributionNotFound,
-                    pkg_resources._vendor.packaging.requirements.InvalidRequirement,
-                    pkg_resources.RequirementParseError):
+            except Exception:
                 pass
 
         return resolved

@@ -49,7 +49,7 @@ post <http://tech.yipit.com/2013/01/03/how-yipit-scales-thumbnailing-with-thumbo
 
 .. image:: images/oony.png
 
-http://oony.com is using thumbor to serve thumbnail images behing
+http://oony.com is using thumbor to serve thumbnail images behind
 Amazon's Cloudfront CDN.
 
     We've previously adapted the size of the thumbnails to what was
@@ -113,6 +113,29 @@ slogan into an original tee and order it immediately.
     TypeTees was developed by www.prolificinteractive.com and you can
     learn more about how thumbor helped them at `their engineering blog
     post <http://prolificinteractive.com/blog/2014/05/29/threadless-typetees-neat-and-easy-thumbnails-using-thumbor-and-php/>`__.
+
+.. figure:: https://lh4.googleusercontent.com/gHam5ielak_FmlYLnl9ONZSD_LXyp8SLS1LbU9xt7WedO3BiX8KVGGUmcYXEX7UB__14GA=w1883-h1153
+   :alt: just watch
+
+`Just Watch <http://www.justwatch.com>`__
+
+    At JustWatch, we're big fans of Thumbor as well.
+
+    We're serving it behind a CloudFront custom origin like many others, and features like WebP and smart cropping saved us huge amounts of time and bandwidth.
+
+.. figure:: https://cloud.githubusercontent.com/assets/306014/14242873/8771528a-fa52-11e5-894c-0cdbf66580ce.png
+   :alt: Ridelink
+
+`Ridelink <https://ridelink.com/>`__
+
+    RideLink uses Thumbor to provide the most appropriate, and optimized, image for the platform our customer is using.
+
+    Setting it up and enhancing it was an easy task thanks to the good documentation and the available plugins.
+
+    Thanks to the team behind Thumbor for making our lifes easier!
+
+    Cheers!
+    Erico Andrei - CTO
 
 How to add my site or product here
 ----------------------------------

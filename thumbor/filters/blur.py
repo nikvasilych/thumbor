@@ -5,7 +5,7 @@
 
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license
-# Copyright (c) 2011 globo.com timehome@corp.globo.com
+# Copyright (c) 2011 globo.com thumbor@googlegroups.com
 
 import math
 
@@ -13,6 +13,11 @@ from thumbor.filters import BaseFilter, filter_method
 from thumbor.ext.filters import _convolution
 
 MAX_RADIUS = 150
+
+try:
+    xrange          # Python 2
+except NameError:
+    xrange = range  # Python 3
 
 
 class Filter(BaseFilter):

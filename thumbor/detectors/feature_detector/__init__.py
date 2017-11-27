@@ -6,25 +6,32 @@
 
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license
-# Copyright (c) 2011 globo.com timehome@corp.globo.com
+# Copyright (c) 2011 globo.com thumbor@googlegroups.com
 
 import cv2
 import numpy as np
 
 from thumbor.detectors import BaseDetector
 from thumbor.point import FocalPoint
+from thumbor.utils import logger
 
 
 class Detector(BaseDetector):
 
     def detect(self, callback):
         engine = self.context.modules.engine
-        img = np.array(
-            engine.convert_to_grayscale(
-                update_image=False,
-                with_alpha=False
+        try:
+            img = np.array(
+                engine.convert_to_grayscale(
+                    update_image=False,
+                    with_alpha=False
+                )
             )
-        )
+        except Exception as e:
+            logger.exception(e)
+            logger.warn('Error during feature detection; skipping to next detector')
+            self.next(callback)
+            return
 
         points = cv2.goodFeaturesToTrack(
             img,

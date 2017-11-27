@@ -6,9 +6,9 @@
 
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license
-# Copyright (c) 2011 globo.com timehome@corp.globo.com
+# Copyright (c) 2011 globo.com thumbor@googlegroups.com
 
-from urllib import quote, unquote
+from six.moves.urllib.parse import quote, unquote
 
 from thumbor.handlers import ContextHandler
 from thumbor.context import RequestParameters
@@ -63,8 +63,14 @@ class ImagingHandler(ContextHandler):
         if url_signature:
             signer = self.context.modules.url_signer(self.context.server.security_key)
 
+            try:
+                quoted_hash = quote(self.context.request.hash)
+            except KeyError:
+                self._error(400, 'Invalid hash: %s' % self.context.request.hash)
+                return
+
             url_to_validate = url.replace('/%s/' % self.context.request.hash, '') \
-                .replace('/%s/' % quote(self.context.request.hash), '')
+                .replace('/%s/' % quoted_hash, '')
 
             valid = signer.validate(unquote(url_signature), url_to_validate)
 

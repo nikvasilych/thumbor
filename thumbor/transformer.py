@@ -6,7 +6,7 @@
 
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license
-# Copyright (c) 2011 globo.com timehome@corp.globo.com
+# Copyright (c) 2011 globo.com thumbor@googlegroups.com
 
 import math
 import sys
@@ -132,6 +132,7 @@ class Transformer(object):
     def smart_storage_key(self):
         return self.context.request.image_url
 
+    @gen.coroutine
     def smart_detect(self):
         is_gifsicle = (self.context.request.engine.extension == '.gif' and self.context.config.USE_GIFSICLE_ENGINE)
         if (not (self.context.modules.detectors and self.context.request.smart)) or is_gifsicle:
@@ -149,7 +150,7 @@ class Transformer(object):
             # image operation inside the try block.
             self.should_run_image_operations = False
             self.running_smart_detection = True
-            self.do_smart_detection().result()
+            yield self.do_smart_detection()
             self.running_smart_detection = False
         except Exception:
             if not self.context.config.IGNORE_SMART_ERRORS:
@@ -345,6 +346,12 @@ class Transformer(object):
         else:
             resize_height = self.target_height
             resize_width = round(source_width * self.target_height / source_height)
+
+        # ensure that filter should work on the real image size and not on the request
+        # size which might be smaller than the resized image in case `full-fit-in` is
+        # being used
+        self.context.request.width = int(max(self.context.request.width, resize_width))
+        self.context.request.height = int(max(self.context.request.height, resize_height))
 
         self.engine.resize(resize_width, resize_height)
 

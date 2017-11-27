@@ -6,11 +6,12 @@
 
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license
-# Copyright (c) 2011 globo.com timehome@corp.globo.com
+# Copyright (c) 2011 globo.com thumbor@googlegroups.com
 
 import sys
 import optparse
-from urllib import quote
+
+from six.moves.urllib.parse import quote
 
 from thumbor import __version__
 from libthumbor import CryptoURL
@@ -169,7 +170,7 @@ def main(arguments=None):
 
     try:
         config = Config.load(None)
-    except:
+    except Exception:
         config = None
 
     if not parsed_options.key and not config:
@@ -184,6 +185,7 @@ def main(arguments=None):
     sys.stdout.write('%s\n' % url)
 
     return url
+
 
 if __name__ == '__main__':
     main(sys.argv[1:])

@@ -6,7 +6,7 @@
 
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license
-# Copyright (c) 2011 globo.com timehome@corp.globo.com
+# Copyright (c) 2011 globo.com thumbor@googlegroups.com
 
 
 from preggy import expect
@@ -18,8 +18,8 @@ class FillFilterTestCase(FilterTestCase):
     def test_fill_filter_with_fixed_color(self):
         def config_context(context):
             context.request.fit_in = True
-            context.request.width = 400
-            context.request.height = 400
+            context.request.width = 800
+            context.request.height = 800
 
         image = self.get_filtered(
             'source.jpg',
@@ -36,8 +36,8 @@ class FillFilterTestCase(FilterTestCase):
     def test_fill_filter_with_average(self):
         def config_context(context):
             context.request.fit_in = True
-            context.request.width = 400
-            context.request.height = 400
+            context.request.width = 800
+            context.request.height = 800
 
         image = self.get_filtered(
             'source.jpg',
@@ -49,4 +49,23 @@ class FillFilterTestCase(FilterTestCase):
         expected = self.get_fixture('fill2.jpg')
 
         ssim = self.get_ssim(image, expected)
-        expect(ssim).to_be_greater_than(0.98)
+        expect(ssim).to_be_greater_than(0.97)
+
+    def test_fill_filter_with_full_fit_in(self):
+        def config_context(context):
+            context.request.fit_in = True
+            context.request.full = True
+            context.request.width = 800
+            context.request.height = 800
+
+        image = self.get_filtered(
+            'source.jpg',
+            'thumbor.filters.fill',
+            'fill(auto)',
+            config_context=config_context
+        )
+
+        expected = self.get_fixture('fill3.jpg')
+
+        ssim = self.get_ssim(image, expected)
+        expect(ssim).to_be_greater_than(0.97)

@@ -6,7 +6,7 @@
 
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license
-# Copyright (c) 2011 globo.com timehome@corp.globo.com
+# Copyright (c) 2011 globo.com thumbor@googlegroups.com
 
 from setuptools import setup, Extension
 from thumbor import __version__
@@ -17,24 +17,21 @@ import logging
 
 
 tests_require = [
-    "simplejson>=2.1.6,<2.2.0",
-    "redis==2.4.9",
-    "gevent",
-    "tornado-pyvows>=0.6.0",
+    "redis>=2.4.9,<3.0.0",
     "coverage",
-    "mock==1.0.1",
+    "mock>=1.0.1,<3.0.0",
     "raven",
     "nose",
     "nose-focus",
     "colorama",
     "numpy",
-    "scipy==0.16.1",
     "flake8",
     "yanc",
     "remotecv",
-    "hiredis",
-    "scikit-image>=0.12.3",
-    "celery"
+    "pyssim>=0.4.0",
+    "cairosvg>=1.0.0,<2.0.0,!=1.0.21",
+    "preggy>=1.3.0",
+    "opencv-python",
 ]
 
 
@@ -75,7 +72,7 @@ http://<thumbor-server>/300x200/smart/s.glbimg.com/et/bb/f/original/2011/03/24/V
 """,
         keywords='imaging face detection feature thumbnail imagemagick pil opencv',
         author='globo.com',
-        author_email='timehome@corp.globo.com',
+        author_email='thumbor@googlegroups.com',
         url='https://github.com/thumbor/thumbor/wiki',
         license='MIT',
         classifiers=[
@@ -99,16 +96,18 @@ http://<thumbor-server>/300x200/smart/s.glbimg.com/et/bb/f/original/2011/03/24/V
         install_requires=[
             "tornado>=4.1.0,<5.0.0",
             "pyCrypto>=2.1.0",
-            "pycurl>=7.19.0,<7.20.0",
-            "Pillow>=3.0.0,<4.0.0",
+            "pycurl>=7.19.0,<7.44.0",
+            "Pillow>=3.0.0,<5.0.0",
             "derpconf>=0.2.0",
-            "python-magic>=0.4.3",
-            "pexif>=0.15,<1.0",
+            "piexif>=1.0.13,<1.1.0",
             "statsd>=3.0.1",
-            "libthumbor",
+            "libthumbor>=1.3.2",
             "futures",
             "argparse",
             "pytz",
+            "schedule",
+            "six",
+            "webcolors",
         ],
 
         extras_require={
@@ -125,6 +124,7 @@ http://<thumbor-server>/300x200/smart/s.glbimg.com/et/bb/f/original/2011/03/24/V
 
         ext_modules=extension_modules
     )
+
 
 try:
     run_setup(gather_filter_extensions())

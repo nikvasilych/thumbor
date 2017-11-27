@@ -6,10 +6,11 @@
 
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license
-# Copyright (c) 2011 globo.com timehome@corp.globo.com
+# Copyright (c) 2011 globo.com thumbor@googlegroups.com
 
 from thumbor.detectors.local_detector import CascadeLoaderDetector
 from thumbor.point import FocalPoint
+from thumbor.utils import logger
 
 HAIR_OFFSET = 0.12
 
@@ -25,7 +26,13 @@ class Detector(CascadeLoaderDetector):
         return top
 
     def detect(self, callback):
-        features = self.get_features()
+        try:
+            features = self.get_features()
+        except Exception as e:
+            logger.exception(e)
+            logger.warn('Error during face detection; skipping to next detector')
+            self.next(callback)
+            return
 
         if features:
             for (left, top, width, height), neighbors in features:

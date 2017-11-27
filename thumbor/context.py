@@ -6,7 +6,7 @@
 
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license
-# Copyright (c) 2011 globo.com timehome@corp.globo.com
+# Copyright (c) 2011 globo.com thumbor@googlegroups.com
 
 from os.path import abspath, exists
 import tornado
@@ -15,6 +15,12 @@ import functools
 
 from thumbor.filters import FiltersFactory
 from thumbor.metrics.logger_metrics import Metrics
+from thumbor.utils import logger
+
+try:
+    unicode
+except NameError:
+    unicode = str
 
 
 class Context:
@@ -41,21 +47,39 @@ class Context:
             self.modules = None
             self.metrics = Metrics(config)
 
+        self.app_class = 'thumbor.app.ThumborServiceApp'
+
+        if hasattr(self.config, 'APP_CLASS'):
+            self.app_class = self.config.APP_CLASS
+
+        if hasattr(self.server, 'app_class') and self.server.app_class != 'thumbor.app.ThumborServiceApp':
+            self.app_class = self.server.app_class
+
         self.filters_factory = FiltersFactory(self.modules.filters if self.modules else [])
         self.request_handler = request_handler
         self.statsd_client = self.metrics  # TODO statsd_client is deprecated, remove me on next minor version bump
         self.thread_pool = ThreadPool.instance(getattr(config, 'ENGINE_THREADPOOL_SIZE', 0))
         self.headers = {}
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        if self.modules:
+            self.modules.cleanup()
+
+        self.thread_pool.cleanup()
+
 
 class ServerParameters(object):
-    def __init__(self, port, ip, config_path, keyfile, log_level, app_class, fd=None, gifsicle_path=None):
+    def __init__(self, port, ip, config_path, keyfile, log_level, app_class, debug=False, fd=None, gifsicle_path=None):
         self.port = port
         self.ip = ip
         self.config_path = config_path
         self.keyfile = keyfile
         self.log_level = log_level
         self.app_class = app_class
+        self.debug = debug
         self._security_key = None
         self.fd = fd
         self.load_security_key()
@@ -220,6 +244,10 @@ class ContextImporter:
         self.optimizers = importer.optimizers
         self.url_signer = importer.url_signer
 
+    def cleanup(self):
+        if self.engine:
+            self.engine.cleanup()
+
 
 class ThreadPool(object):
 
@@ -243,7 +271,16 @@ class ThreadPool(object):
 
     def _execute_in_foreground(self, operation, callback):
         result = Future()
-        result.set_result(operation())
+        returned = None
+
+        try:
+            returned = operation()
+        except Exception as e:
+            logger.exception('[ThreadPool] %s', e)
+            result.set_exception(e)
+        else:
+            result.set_result(returned)
+
         callback(result)
 
     def _execute_in_pool(self, operation, callback):
@@ -262,5 +299,5 @@ class ThreadPool(object):
 
     def cleanup(self):
         if self.pool:
-            print "Joining threads...."
+            print("Joining threads....")
             self.pool.shutdown()

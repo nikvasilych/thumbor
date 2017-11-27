@@ -6,7 +6,7 @@
 
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license
-# Copyright (c) 2011 globo.com timehome@corp.globo.com
+# Copyright (c) 2011 globo.com thumbor@googlegroups.com
 import tornado.web
 import tornado.ioloop
 
@@ -22,7 +22,8 @@ class ThumborServiceApp(tornado.web.Application):
 
     def __init__(self, context):
         self.context = context
-        super(ThumborServiceApp, self).__init__(self.get_handlers())
+        self.debug = getattr(self.context.server, 'debug', False)
+        super(ThumborServiceApp, self).__init__(self.get_handlers(), debug=self.debug)
 
     def get_handlers(self):
         handlers = [

@@ -6,11 +6,14 @@
 
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license
-# Copyright (c) 2011 globo.com timehome@corp.globo.com
+# Copyright (c) 2011 globo.com thumbor@googlegroups.com
 
+import gc
 import sys
 import logging
 import logging.config
+import schedule
+import warnings
 
 import os
 import socket
@@ -24,6 +27,13 @@ from thumbor.config import Config
 from thumbor.importer import Importer
 from thumbor.context import Context
 from thumbor.utils import which
+
+from PIL import Image
+
+try:
+    basestring
+except NameError:
+    basestring = str
 
 
 def get_as_integer(value):
@@ -72,6 +82,10 @@ def validate_config(config, server_parameters):
             'No security key was found for this instance of thumbor. ' +
             'Please provide one using the conf file or a security key file.')
 
+    if config.ENGINE or config.USE_GIFSICLE_ENGINE:
+        # Error on Image.open when image pixel count is above MAX_IMAGE_PIXELS
+        warnings.simplefilter('error', Image.DecompressionBombWarning)
+
     if config.USE_GIFSICLE_ENGINE:
         server_parameters.gifsicle_path = which('gifsicle')
         if server_parameters.gifsicle_path is None:
@@ -90,11 +104,11 @@ def get_context(server_parameters, config, importer):
 
 
 def get_application(context):
-    return context.modules.importer.import_class(context.server.app_class)(context)
+    return context.modules.importer.import_class(context.app_class)(context)
 
 
 def run_server(application, context):
-    server = HTTPServer(application)
+    server = HTTPServer(application, xheaders=True)
 
     if context.server.fd is not None:
         fd_number = get_as_integer(context.server.fd)
@@ -112,6 +126,12 @@ def run_server(application, context):
     server.start(1)
 
 
+def gc_collect():
+    collected = gc.collect()
+    if collected > 0:
+        logging.warn('Garbage collector: collected %d objects.' % collected)
+
+
 def main(arguments=None):
     '''Runs thumbor server with the specified arguments.'''
     if arguments is None:
@@ -121,23 +141,24 @@ def main(arguments=None):
     config = get_config(server_parameters.config_path)
     configure_log(config, server_parameters.log_level.upper())
 
-    importer = get_importer(config)
-
     validate_config(config, server_parameters)
 
-    context = get_context(server_parameters, config, importer)
+    importer = get_importer(config)
 
-    application = get_application(context)
-    run_server(application, context)
+    with get_context(server_parameters, config, importer) as context:
+        application = get_application(context)
+        run_server(application, context)
 
-    try:
-        logging.debug('thumbor running at %s:%d' % (context.server.ip, context.server.port))
-        tornado.ioloop.IOLoop.instance().start()
-    except KeyboardInterrupt:
-        sys.stdout.write('\n')
-        sys.stdout.write("-- thumbor closed by user interruption --\n")
-    finally:
-        context.thread_pool.cleanup()
+        if (config.GC_INTERVAL and config.GC_INTERVAL > 0):
+            schedule.every(config.GC_INTERVAL).seconds.do(gc_collect)
+
+        try:
+            logging.debug('thumbor running at %s:%d' % (context.server.ip, context.server.port))
+            tornado.ioloop.IOLoop.instance().start()
+        except KeyboardInterrupt:
+            sys.stdout.write('\n')
+            sys.stdout.write("-- thumbor closed by user interruption --\n")
+
 
 if __name__ == "__main__":
     main(sys.argv)

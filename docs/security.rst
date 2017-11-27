@@ -91,8 +91,8 @@ The description of the base64 method is:
 ::
 
     base64.urlsafe_b64encode(s)
-    Encode string s using a URL-safe alphabet, which substitutes 
-    - instead of + and _ instead of / in the standard Base64 alphabet. 
+    Encode string s using a URL-safe alphabet, which substitutes
+    - instead of + and _ instead of / in the standard Base64 alphabet.
     The result can still contain =.
 
 The old way
@@ -100,7 +100,7 @@ The old way
 
 thumbor used to generate URL's differently using AES
 encryption/decryption. If you need more info on the old way of
-generating URLs, read the [[3.0.0 release changes]].
+generating URLs, read the `3.0.0 release changes`_.
 
 Loading Images over HTTPS
 -------------------------
@@ -121,3 +121,5 @@ More Information
 
 -  :doc:`release_notes`
 
+
+.. _3.0.0 release changes: https://github.com/thumbor/thumbor/wiki/3.0.0-release-changes

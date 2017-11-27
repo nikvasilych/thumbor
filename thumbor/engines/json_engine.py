@@ -6,7 +6,7 @@
 
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license
-# Copyright (c) 2011 globo.com timehome@corp.globo.com
+# Copyright (c) 2011 globo.com thumbor@googlegroups.com
 
 import json
 
@@ -18,6 +18,7 @@ class JSONEngine(BaseEngine):
     def __init__(self, engine, path, callback_name=None):
         super(JSONEngine, self).__init__(engine.context)
         self.engine = engine
+        self.extension = engine.extension
         self.width, self.height = self.engine.size
         self.path = path
         self.callback_name = callback_name
@@ -97,6 +98,9 @@ class JSONEngine(BaseEngine):
     def enable_alpha(self):
         return self.engine.enable_alpha()
 
+    def strip_exif(self):
+        return self.engine.strip_exif()
+
     def strip_icc(self):
         return self.engine.strip_icc()
 
@@ -112,7 +116,7 @@ class JSONEngine(BaseEngine):
     def image_data_as_rgb(self, update_image=True):
         return self.engine.image_data_as_rgb(update_image)
 
-    def convert_to_grayscale(self):
+    def convert_to_grayscale(self, update_image=True, alpha=True):
         pass
 
     def get_frame_count(self):
