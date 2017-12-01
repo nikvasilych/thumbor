@@ -10,15 +10,18 @@ def parseperiod(s):
     d['D'] += 7*d['W']
     return [d[_] for _ in 'YMDhms']
 
+
 def process(path, period):
     now = time.time()
-    for f in os.listdir(path):
-        expiration = time.localtime(os.stat(f).st_mtime)
-        expiration = [period[_]+expiration[_] for _ in range(6)] + [0]*3
-        expiration = time.mktime(expiration)
-        if expiration < now:
-            if os.path.isfile(f):
-                os.remove(os.path.join(path, f))
+    for dirpath, dirnames, filenames in os.walk(path):
+        for file in filenames:
+            curpath = os.path.join(dirpath, file)
+            expiration = time.localtime(os.stat(curpath).st_mtime)
+            expiration = [period[_]+expiration[_] for _ in range(6)] + [0]*3
+            expiration = time.mktime(expiration)
+            if expiration < now:
+                if os.path.isfile(curpath):
+                    os.remove(curpath)
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
