@@ -22,6 +22,12 @@ def process(path, period):
             if expiration < now:
                 if os.path.isfile(curpath):
                     os.remove(curpath)
+    for dirpath, dirnames, filenames in os.walk(path, topdown=False):
+        for dirname in dirnames:
+            curpath = os.path.join(dirpath, dirname)
+            files = os.listdir(curpath)
+            if not files:
+                os.rmdir(curpath)
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
