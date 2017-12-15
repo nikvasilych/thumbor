@@ -16,7 +16,7 @@ def process(path, period):
     for dirpath, dirnames, filenames in os.walk(path):
         for file in filenames:
             curpath = os.path.join(dirpath, file)
-            expiration = time.localtime(os.stat(curpath).st_mtime)
+            expiration = time.localtime(os.stat(curpath).st_atime)
             expiration = [period[_]+expiration[_] for _ in range(6)] + [0]*3
             expiration = time.mktime(expiration)
             if expiration < now:
