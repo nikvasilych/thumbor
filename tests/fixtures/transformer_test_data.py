@@ -84,7 +84,8 @@ class TestData(object):
             target_width, target_height,
             halign, valign, focal_points,
             crop_left, crop_top, crop_right, crop_bottom,
-            fit_in=False, adaptive=False, full=False, meta=False):
+            fit_in=False, adaptive=False, full=False,
+            meta=False, stretch=False):
 
         self.source_width = source_width
         self.source_height = source_height
@@ -101,6 +102,7 @@ class TestData(object):
         self.adaptive = adaptive
         self.full = full
         self.meta = meta
+        self.stretch = stretch
 
     def __repr__(self):
         return self.__str__()
@@ -162,7 +164,8 @@ class TestData(object):
             extension="JPEG",
             filters=[],
             quality=80,
-            image="some.jpeg"
+            image="some.jpeg",
+            stretch=self.stretch
         )
         ctx.request.engine = self.engine
         ctx.request.engine.extension = ".jpeg"
@@ -945,7 +948,7 @@ FIT_IN_CROP_DATA = [
         focal_points=[],
         crop_left=None, crop_top=None, crop_right=None, crop_bottom=None,
         fit_in=True
-    ), (200, 100, 1)),
+    ), (200, 100, True)),
 
     (TestData(
         source_width=1000, source_height=250,
@@ -954,7 +957,7 @@ FIT_IN_CROP_DATA = [
         focal_points=[],
         crop_left=None, crop_top=None, crop_right=None, crop_bottom=None,
         fit_in=True
-    ), (500, 125, 1)),
+    ), (500, 125, True)),
 
     (TestData(
         source_width=200, source_height=250,
@@ -963,7 +966,7 @@ FIT_IN_CROP_DATA = [
         focal_points=[],
         crop_left=None, crop_top=None, crop_right=None, crop_bottom=None,
         fit_in=True
-    ), (200, 250, 0)),
+    ), (200, 250, False)),
 
     (TestData(
         source_width=800, source_height=400,
@@ -972,7 +975,7 @@ FIT_IN_CROP_DATA = [
         focal_points=[],
         crop_left=None, crop_top=None, crop_right=None, crop_bottom=None,
         fit_in=True, adaptive=True
-    ), (200, 100, 1)),
+    ), (200, 100, True)),
 
     (TestData(
         source_width=800, source_height=400,
@@ -981,7 +984,7 @@ FIT_IN_CROP_DATA = [
         focal_points=[],
         crop_left=None, crop_top=None, crop_right=None, crop_bottom=None,
         fit_in=True, full=True
-    ), (400, 200, 1)),
+    ), (400, 200, True)),
 
     (TestData(
         source_width=200, source_height=250,
@@ -990,7 +993,7 @@ FIT_IN_CROP_DATA = [
         focal_points=[],
         crop_left=None, crop_top=None, crop_right=None, crop_bottom=None,
         fit_in=True, full=True
-    ), (500, 625, 1)),
+    ), (500, 625, True)),
 
     (TestData(
         source_width=800, source_height=400,
@@ -999,5 +1002,33 @@ FIT_IN_CROP_DATA = [
         focal_points=[],
         crop_left=None, crop_top=None, crop_right=None, crop_bottom=None,
         fit_in=True, adaptive=True, full=True
-    ), (400, 200, 1))
+    ), (400, 200, True)),
+
+    (TestData(
+        source_width=500, source_height=500,
+        target_width=250, target_height="orig",
+        halign="middle", valign="middle",
+        focal_points=[],
+        crop_left=None, crop_top=None, crop_right=None, crop_bottom=None,
+        fit_in=True
+    ), (250, 250, True)),
+
+    (TestData(
+        source_width=500, source_height=500,
+        target_width="orig", target_height=250,
+        halign="middle", valign="middle",
+        focal_points=[],
+        crop_left=None, crop_top=None, crop_right=None, crop_bottom=None,
+        fit_in=True
+    ), (250, 250, True)),
+
+    (TestData(
+        source_width=500, source_height=500,
+        target_width="orig", target_height="orig",
+        halign="middle", valign="middle",
+        focal_points=[],
+        crop_left=None, crop_top=None, crop_right=None, crop_bottom=None,
+        fit_in=True
+    ), (500, 500, False)),
+
 ]

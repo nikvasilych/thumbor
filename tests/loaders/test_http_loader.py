@@ -8,20 +8,22 @@
 # http://www.opensource.org/licenses/mit-license
 # Copyright (c) 2011 globo.com thumbor@googlegroups.com
 
+import re
 import time
 from os.path import abspath, join, dirname
-from preggy import expect
+
 import mock
-# from tornado.concurrent import Future
 import tornado.web
-from tests.base import PythonTestCase, TestCase
-from tornado.concurrent import Future
-import re
+from preggy import expect
 from six.moves.urllib.parse import quote
+from tornado.concurrent import Future
+from tornado.httpclient import AsyncHTTPClient
+from tornado.testing import AsyncHTTPTestCase
 
 import thumbor.loaders.http_loader as loader
-from thumbor.context import Context
+from tests.base import PythonTestCase
 from thumbor.config import Config
+from thumbor.context import Context
 from thumbor.loaders import LoaderResult
 
 
@@ -127,7 +129,7 @@ class ValidateUrlTestCase(PythonTestCase):
         config = Config()
         config.ALLOWED_SOURCES = [
             's.glbimg.com',
-            re.compile(r'https:\/\/www\.google\.com/img/.*')
+            re.compile(r'https://www\.google\.com/img/.*')
         ]
         ctx = Context(None, config, None)
         expect(
@@ -178,24 +180,31 @@ class NormalizeUrlTestCase(PythonTestCase):
         expect(result).to_equal(expected)
 
 
-class HttpLoaderTestCase(TestCase):
+class DummyAsyncHttpClientTestCase(AsyncHTTPTestCase):
+    # By default Tornado allows to create one (Async)HttpClient per IOLoop instance
+    # http://www.tornadoweb.org/en/stable/httpclient.html#tornado.httpclient.AsyncHTTPClient
+    # AsyncHTTPTestCase provides a lot of useful code, which starts http server listening with an app running.
+    # But it also constructs AsyncHttpClient, which then by default is getting reused upon next calls to
+    # get new AsyncHttpClient. Some test cases are requiring curl client to be initialized (see http_loader.py)
+    # but, by the time http_loader configures Tornado's AsyncHTTPClient, it's already too late,
+    # since Tornado has http client initialized for given IOLoop.
+    # Forcing new instance here, on test start up time, is ensuring that it won't be treated as singleton
+    # and rather be disposable instance.
+    def get_http_client(self):
+        return AsyncHTTPClient(force_instance=True)
 
+    def tearDown(self):
+        AsyncHTTPClient().close()  # clean up singleton instance
+        super(DummyAsyncHttpClientTestCase, self).tearDown()
+
+
+class HttpLoaderTestCase(DummyAsyncHttpClientTestCase):
     def get_app(self):
         application = tornado.web.Application([
             (r"/", MainHandler),
         ])
 
         return application
-
-    def setUp(self):
-        super(HttpLoaderTestCase, self).setUp()
-        # not sure how AsyncHTTPClient really works (see the
-        # magic regarding quasi-singleton) but I need to
-        # force the connection to be closed so that it can
-        # be configured with the right http client implementation
-        # afterwards, otherwise I will get a cached (and normally
-        # wrong) implementation
-        tornado.httpclient.AsyncHTTPClient().close()
 
     def test_load_with_callback(self):
         url = self.get_url('/')
@@ -238,7 +247,7 @@ class HttpLoaderTestCase(TestCase):
         expect(isinstance(future, Future)).to_be_true()
 
 
-class HttpLoaderWithHeadersForwardingTestCase(TestCase):
+class HttpLoaderWithHeadersForwardingTestCase(DummyAsyncHttpClientTestCase):
 
     def get_app(self):
         application = tornado.web.Application([
@@ -296,8 +305,25 @@ class HttpLoaderWithHeadersForwardingTestCase(TestCase):
         expect(result.buffer).to_include("X-Server:thumbor\n")
         expect(result.buffer).to_include("X-Test:123\n")
 
+    def test_load_with_empty_accept(self):
+        url = self.get_url('/')
+        config = Config()
+        handler_mock_options = {
+            "Accept-Encoding": "gzip",
+            "User-Agent": "Thumbor",
+            "Host": "localhost",
+            "Accept": "",
+            "X-Server": "thumbor"
+        }
+        ctx = Context(None, config, None, HandlerMock(handler_mock_options))
 
-class HttpLoaderWithUserAgentForwardingTestCase(TestCase):
+        loader.load(ctx, url, self.stop)
+        result = self.wait()
+        expect(result).to_be_instance_of(LoaderResult)
+        expect(result.buffer).to_include("Accept:image/*;q=0.9,*/*;q=0.1\n")
+
+
+class HttpLoaderWithUserAgentForwardingTestCase(DummyAsyncHttpClientTestCase):
 
     def get_app(self):
         application = tornado.web.Application([
@@ -330,7 +356,7 @@ class HttpLoaderWithUserAgentForwardingTestCase(TestCase):
         expect(result.buffer).to_equal('DEFAULT_USER_AGENT')
 
 
-class HttpCurlTimeoutLoaderTestCase(TestCase):
+class HttpCurlTimeoutLoaderTestCase(DummyAsyncHttpClientTestCase):
 
     def get_app(self):
         application = tornado.web.Application([
@@ -338,16 +364,6 @@ class HttpCurlTimeoutLoaderTestCase(TestCase):
         ])
 
         return application
-
-    def setUp(self):
-        super(HttpCurlTimeoutLoaderTestCase, self).setUp()
-        # not sure how AsyncHTTPClient really works (see the
-        # magic regarding quasi-singleton) but I need to
-        # force the connection to be closed so that it can
-        # be configured with the right http client implementation
-        # afterwards, otherwise I will get a cached (and normally
-        # wrong) implementation
-        tornado.httpclient.AsyncHTTPClient().close()
 
     def test_load_with_timeout(self):
         url = self.get_url('/')
@@ -367,7 +383,7 @@ class HttpCurlTimeoutLoaderTestCase(TestCase):
         config = Config()
         config.HTTP_LOADER_CURL_ASYNC_HTTP_CLIENT = True
         config.HTTP_LOADER_CURL_LOW_SPEED_TIME = 1
-        config.HTTP_LOADER_CURL_LOW_SPEED_LIMIT = 1000000000000
+        config.HTTP_LOADER_CURL_LOW_SPEED_LIMIT = 1000000000
         ctx = Context(None, config, None)
 
         loader.load(ctx, url, self.stop)
@@ -377,7 +393,7 @@ class HttpCurlTimeoutLoaderTestCase(TestCase):
         expect(result.successful).to_be_false()
 
 
-class HttpTimeoutLoaderTestCase(TestCase):
+class HttpTimeoutLoaderTestCase(DummyAsyncHttpClientTestCase):
 
     def get_app(self):
         application = tornado.web.Application([
@@ -386,21 +402,11 @@ class HttpTimeoutLoaderTestCase(TestCase):
 
         return application
 
-    def setUp(self):
-        super(HttpTimeoutLoaderTestCase, self).setUp()
-        # not sure how AsyncHTTPClient really works (see the
-        # magic regarding quasi-singleton) but I need to
-        # force the connection to be closed so that it can
-        # be configured with the right http client implementation
-        # afterwards, otherwise I will get a cached (and normally
-        # wrong) implementation
-        tornado.httpclient.AsyncHTTPClient().close()
-
     def test_load_without_curl_but_speed_timeout(self):
         url = self.get_url('/')
         config = Config()
         config.HTTP_LOADER_CURL_LOW_SPEED_TIME = 1
-        config.HTTP_LOADER_CURL_LOW_SPEED_LIMIT = 1000000000000
+        config.HTTP_LOADER_CURL_LOW_SPEED_LIMIT = 1000000000
         ctx = Context(None, config, None)
 
         loader.load(ctx, url, self.stop)

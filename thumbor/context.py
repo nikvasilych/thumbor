@@ -9,9 +9,9 @@
 # Copyright (c) 2011 globo.com thumbor@googlegroups.com
 
 from os.path import abspath, exists
-import tornado
+
 from concurrent.futures import ThreadPoolExecutor, Future
-import functools
+from tornado.ioloop import IOLoop
 
 from thumbor.filters import FiltersFactory
 from thumbor.metrics.logger_metrics import Metrics
@@ -57,7 +57,6 @@ class Context:
 
         self.filters_factory = FiltersFactory(self.modules.filters if self.modules else [])
         self.request_handler = request_handler
-        self.statsd_client = self.metrics  # TODO statsd_client is deprecated, remove me on next minor version bump
         self.thread_pool = ThreadPool.instance(getattr(config, 'ENGINE_THREADPOOL_SIZE', 0))
         self.headers = {}
 
@@ -72,7 +71,7 @@ class Context:
 
 
 class ServerParameters(object):
-    def __init__(self, port, ip, config_path, keyfile, log_level, app_class, debug=False, fd=None, gifsicle_path=None):
+    def __init__(self, port, ip, config_path, keyfile, log_level, app_class, debug=False, fd=None, gifsicle_path=None, use_environment=False):
         self.port = port
         self.ip = ip
         self.config_path = config_path
@@ -81,9 +80,10 @@ class ServerParameters(object):
         self.app_class = app_class
         self.debug = debug
         self._security_key = None
-        self.fd = fd
         self.load_security_key()
+        self.fd = fd
         self.gifsicle_path = gifsicle_path
+        self.use_environment = use_environment
 
     @property
     def security_key(self):
@@ -124,6 +124,7 @@ class RequestParameters:
                  adaptive=False,
                  full=False,
                  fit_in=False,
+                 stretch=False,
                  width=0,
                  height=0,
                  horizontal_flip=False,
@@ -142,7 +143,8 @@ class RequestParameters:
                  hash=None,
                  accepts_webp=False,
                  request=None,
-                 max_age=None):
+                 max_age=None,
+                 auto_png_to_jpg=None):
 
         self.debug = bool(debug)
         self.meta = bool(meta)
@@ -174,6 +176,7 @@ class RequestParameters:
         self.adaptive = bool(adaptive)
         self.full = bool(full)
         self.fit_in = bool(fit_in)
+        self.stretch = bool(stretch)
 
         self.width = width == "orig" and "orig" or self.int_or_0(width)
         self.height = height == "orig" and "orig" or self.int_or_0(height)
@@ -204,6 +207,7 @@ class RequestParameters:
         self.accepts_webp = accepts_webp
         self.max_bytes = None
         self.max_age = max_age
+        self.auto_png_to_jpg = auto_png_to_jpg
 
         if request:
             self.url = request.path
@@ -271,7 +275,6 @@ class ThreadPool(object):
 
     def _execute_in_foreground(self, operation, callback):
         result = Future()
-        returned = None
 
         try:
             returned = operation()
@@ -284,12 +287,9 @@ class ThreadPool(object):
         callback(result)
 
     def _execute_in_pool(self, operation, callback):
-        task = self.pool.submit(operation)
-        task.add_done_callback(
-            lambda future: tornado.ioloop.IOLoop.instance().add_callback(
-                functools.partial(callback, future)
-            )
-        )
+        future = self.pool.submit(operation)
+
+        IOLoop.current().add_future(future, callback)
 
     def queue(self, operation, callback):
         if not self.pool:

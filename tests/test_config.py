@@ -84,9 +84,10 @@ class ConfigValuesTestCase(TestCase):
                 'thumbor.filters.saturation',
                 'thumbor.filters.max_age',
                 'thumbor.filters.curve',
-                'thumbor.filters.distributed_collage',
                 'thumbor.filters.background_color',
                 'thumbor.filters.upscale',
+                'thumbor.filters.proportion',
+                'thumbor.filters.stretch',
             ])
         )
 

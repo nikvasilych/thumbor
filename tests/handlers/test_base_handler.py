@@ -394,6 +394,156 @@ class ImageOperationsWithStoredKeysTestCase(BaseImagingTestCase):
         expect(response.body).to_be_similar_to(default_image())
 
 
+class ImageOperationsWithAutoPngToJpgTestCase(BaseImagingTestCase):
+    def get_config(self):
+        cfg = Config(SECURITY_KEY='ACME-SEC')
+        cfg.LOADER = "thumbor.loaders.file_loader"
+        cfg.FILE_LOADER_ROOT_PATH = self.loader_path
+        cfg.STORAGE = "thumbor.storages.no_storage"
+        cfg.AUTO_PNG_TO_JPG = True
+        cfg.RESULT_STORAGE = 'thumbor.result_storages.file_storage'
+        cfg.RESULT_STORAGE_EXPIRATION_SECONDS = 60
+        cfg.RESULT_STORAGE_FILE_STORAGE_ROOT_PATH = self.root_path
+        return cfg
+
+    def get_importer(self):
+        importer = Importer(self.config)
+        importer.import_modules()
+        return importer
+
+    def get_server(self):
+        server = ServerParameters(8889, 'localhost', 'thumbor.conf', None, 'info', None)
+        server.security_key = 'ACME-SEC'
+        return server
+
+    def get_request(self, *args, **kwargs):
+        return RequestParameters(*args, **kwargs)
+
+    def get_context(self, *args, **kwargs):
+        ctx = super(ImageOperationsWithAutoPngToJpgTestCase, self).get_context(*args, **kwargs)
+        ctx.request = self.get_request()
+        return ctx
+
+    def get_as_webp(self, url):
+        return self.fetch(url, headers={
+            "Accept": 'image/webp,*/*;q=0.8'
+        })
+
+    def test_should_auto_convert_png_to_jpg(self):
+        response = self.fetch('/unsafe/Giunchedi%2C_Filippo_January_2015_01.png')
+        expect(response.code).to_equal(200)
+        expect(response.headers).not_to_include('Vary')
+        expect(response.body).to_be_jpeg()
+
+    @patch('thumbor.handlers.Context')
+    def test_should_auto_convert_png_to_jpg_with_signed_images(self, context_mock):
+        context_mock.return_value = self.context
+        crypto = CryptoURL('ACME-SEC')
+        url = crypto.generate(image_url="Giunchedi%2C_Filippo_January_2015_01.png")
+        self.context.request = self.get_request(url=url)
+
+        context_mock.return_value = self.context
+        response = self.fetch(url)
+        expect(response.code).to_equal(200)
+        expect(response.headers).not_to_include('Vary')
+        expect(response.body).to_be_jpeg()
+
+    def test_shouldnt_auto_convert_png_to_jpg_if_png_has_transparency(self):
+        response = self.fetch('/unsafe/watermark.png')
+        expect(response.code).to_equal(200)
+        expect(response.headers).not_to_include('Vary')
+        expect(response.body).to_be_png()
+
+    @patch('thumbor.handlers.Context')
+    def test_shouldnt_auto_convert_png_to_jpg_if_png_has_transparency_with_signed_images(self, context_mock):
+        context_mock.return_value = self.context
+        crypto = CryptoURL('ACME-SEC')
+        url = crypto.generate(image_url="watermark.png")
+        self.context.request = self.get_request(url=url)
+
+        # save on result storage
+        response = self.fetch(url)
+        expect(response.code).to_equal(200)
+        expect(response.headers).not_to_include('Vary')
+        expect(response.body).to_be_png()
+
+    def test_should_auto_convert_png_to_webp_if_auto_webp_is_true(self):
+        self.config.AUTO_WEBP = True
+
+        response = self.get_as_webp('/unsafe/Giunchedi%2C_Filippo_January_2015_01.png')
+        expect(response.code).to_equal(200)
+        expect(response.headers).to_include('Vary')
+        expect(response.body).to_be_webp()
+
+    @patch('thumbor.handlers.Context')
+    def test_should_auto_convert_png_to_webp_if_auto_webp_is_true_with_signed_images(self, context_mock):
+        self.config.AUTO_WEBP = True
+        context_mock.return_value = self.context
+        crypto = CryptoURL('ACME-SEC')
+        url = crypto.generate(image_url="Giunchedi%2C_Filippo_January_2015_01.png")
+        self.context.request = self.get_request(url=url, accepts_webp=True)
+
+        # save on result storage
+        response = self.get_as_webp(url)
+        expect(response.code).to_equal(200)
+        expect(response.headers).to_include('Vary')
+        expect(response.body).to_be_webp()
+
+    def test_should_auto_convert_png_to_webp_if_auto_webp_is_true_and_png_has_transparency(self):
+        self.config.AUTO_WEBP = True
+
+        response = self.get_as_webp('/unsafe/watermark.png')
+        expect(response.code).to_equal(200)
+        expect(response.headers).to_include('Vary')
+        expect(response.body).to_be_webp()
+
+    @patch('thumbor.handlers.Context')
+    def test_should_auto_convert_png_to_webp_if_auto_webp_is_true_and_png_has_transparency_with_signed_images(self, context_mock):
+        self.config.AUTO_WEBP = True
+        context_mock.return_value = self.context
+        crypto = CryptoURL('ACME-SEC')
+        url = crypto.generate(image_url="watermark.png")
+        self.context.request = self.get_request(url=url)
+
+        # save on result storage
+        response = self.get_as_webp(url)
+        expect(response.code).to_equal(200)
+        expect(response.headers).to_include('Vary')
+        expect(response.body).to_be_webp()
+
+    @patch('thumbor.handlers.imaging.RequestParameters')
+    def test_shouldnt_auto_convert_png_to_jpg_if_requested_by_request_param(self, request_mock):
+        def side_effect(*args, **kwargs):
+            req = RequestParameters(**kwargs)
+            req.auto_png_to_jpg = False
+
+            return req
+
+        request_mock.side_effect = side_effect
+
+        response = self.fetch('/unsafe/Giunchedi%2C_Filippo_January_2015_01.png')
+        expect(response.code).to_equal(200)
+        expect(response.headers).not_to_include('Vary')
+        expect(response.body).to_be_png()
+
+    @patch('thumbor.handlers.imaging.RequestParameters')
+    def test_should_auto_convert_png_to_jpg_if_requested_by_request_param(self, request_mock):
+        self.config.AUTO_PNG_TO_JPG = False
+
+        def side_effect(*args, **kwargs):
+            req = RequestParameters(**kwargs)
+            req.auto_png_to_jpg = True
+
+            return req
+
+        request_mock.side_effect = side_effect
+
+        response = self.fetch('/unsafe/Giunchedi%2C_Filippo_January_2015_01.png')
+        expect(response.code).to_equal(200)
+        expect(response.headers).not_to_include('Vary')
+        expect(response.body).to_be_jpeg()
+
+
 class ImageOperationsWithAutoWebPTestCase(BaseImagingTestCase):
     def get_context(self):
         cfg = Config(SECURITY_KEY='ACME-SEC')
@@ -544,7 +694,6 @@ class ImageOperationsWithAutoWebPWithResultStorageTestCase(BaseImagingTestCase):
         expect(response.headers).to_include('Vary')
         expect(response.headers['Vary']).to_include('Accept')
         expect(response.body).to_be_webp()
-        expect(self.context.request.engine.extension).to_equal('.webp')
 
 
 class ImageOperationsWithoutEtagsTestCase(BaseImagingTestCase):
@@ -592,7 +741,7 @@ class ImageOperationsWithLastModifiedTestCase(BaseImagingTestCase):
         return self.context.modules.result_storage
 
     def write_image(self):
-        expected_path = self.result_storage.normalize_path('_wIUeSaeHw8dricKG2MGhqu5thk=/smart/image.jpg')
+        expected_path = self.result_storage.normalize_path('/_wIUeSaeHw8dricKG2MGhqu5thk=/smart/image.jpg')
 
         if not os.path.exists(dirname(expected_path)):
             os.makedirs(dirname(expected_path))
@@ -728,7 +877,7 @@ class ImageOperationsWithResultStorageTestCase(BaseImagingTestCase):
         self.context.request = Mock(
             accepts_webp=False,
         )
-        expected_path = self.result_storage.normalize_path('gTr2Xr9lbzIa2CT_dL_O0GByeR0=/animated.gif')
+        expected_path = self.result_storage.normalize_path('/gTr2Xr9lbzIa2CT_dL_O0GByeR0=/animated.gif')
         expect(expected_path).to_exist()
         expect(response.body).to_be_similar_to(animated_image())
 
@@ -1065,6 +1214,7 @@ class ImageOperationsWithoutStorage(BaseImagingTestCase):
         cfg.STORAGE = "thumbor.storages.no_storage"
         cfg.AUTO_WEBP = True
         cfg.USE_GIFSICLE_ENGINE = True
+        cfg.RESPECT_ORIENTATION = True
 
         importer = Importer(cfg)
         importer.import_modules()
@@ -1106,6 +1256,13 @@ class ImageOperationsWithoutStorage(BaseImagingTestCase):
         response = self.fetch('/unsafe/filters:max_bytes(1000)/Giunchedi%2C_Filippo_January_2015_01.jpg')
         expect(response.code).to_equal(200)
         expect(len(response.body)).to_be_greater_than(1000)
+
+    def test_meta_with_exif_orientation(self):
+        response = self.fetch('/unsafe/meta/0x0/Giunchedi%2C_Filippo_January_2015_01-cmyk-orientation-exif.jpg')
+        expect(response.code).to_equal(200)
+        obj = loads(response.body)
+        expect(obj['thumbor']['target']['width']).to_equal(533)
+        expect(obj['thumbor']['target']['height']).to_equal(800)
 
 
 class TranslateCoordinatesTestCase(TestCase):

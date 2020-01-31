@@ -60,8 +60,18 @@ Config.define('WEBP_QUALITY', None, 'Quality index used for generated WebP image
               'JPEG quality will be used.', 'Imaging')
 
 Config.define('PNG_COMPRESSION_LEVEL', 6, 'Compression level for generated PNG images.', 'Imaging')
+Config.define('PILLOW_PRESERVE_INDEXED_MODE',
+              True,
+              'Indicates if final image should preserve indexed mode (P or 1) of original image', 'Imaging')
 Config.define('AUTO_WEBP', False, 'Specifies whether WebP format should be used automatically if the request accepts it '
               '(via Accept header)', 'Imaging')
+Config.define('AUTO_PNG_TO_JPG', False, 'Specifies whether a PNG image should be used automatically if the png image has '
+              'no transparency (via alpha layer). '
+              'WARNING: Depending on case, this is not a good deal. '
+              'This transformation maybe causes distortions or the size of image can increase. '
+              'Images with texts, for example, the result image maybe will be distorced. '
+              'Dark images, for example, the size of result image maybe will be bigger. '
+              'You have to evaluate the majority of your use cases to take a decision about the usage of this conf.', 'Imaging')
 Config.define('SVG_DPI', 150,
               'Specify the ratio between 1in and 1px for SVG images. This is only used when'
               'rasterizing SVG images having their size units in cm or inches.', 'Imaging')
@@ -137,6 +147,8 @@ Config.define('ALLOW_OLD_URLS', True, 'Indicates if encrypted (old style) URLs s
 Config.define('ENABLE_ETAGS', True, 'Enables automatically generated etags', 'HTTP')
 Config.define('MAX_ID_LENGTH', 32, 'Set maximum id length for images when stored', 'Storage')
 Config.define('GC_INTERVAL', None, 'Set garbage collection interval in seconds', 'Performance')
+
+Config.define('HEALTHCHECK_ROUTE', r'/healthcheck', 'Healthcheck route.', 'Healthcheck')
 
 # METRICS OPTIONS
 Config.define('STATSD_HOST', None, 'Host to send statsd instrumentation to', 'Metrics')
@@ -299,6 +311,13 @@ Config.define(
 )
 
 Config.define(
+    'JPEGTRAN_SCANS_FILE',
+    '',
+    'Path for the progressive scans file to use with jpegtran optimizer. Implies progressive jpeg output',
+    'Optimizers'
+)
+
+Config.define(
     'FFMPEG_PATH',
     '/usr/local/bin/ffmpeg',
     'Path for the ffmpeg binary used to generate gifv(h.264)',
@@ -334,9 +353,10 @@ Config.define(
         'thumbor.filters.saturation',
         'thumbor.filters.max_age',
         'thumbor.filters.curve',
-        'thumbor.filters.distributed_collage',
         'thumbor.filters.background_color',
         'thumbor.filters.upscale',
+        'thumbor.filters.proportion',
+        'thumbor.filters.stretch',
     ],
     'List of filters that thumbor will allow to be used in generated images. All of them must be ' +
     'full names of python modules (python must be able to import it)', 'Filters')
@@ -388,6 +408,16 @@ Config.define(
     'The url signer thumbor should use to verify url signatures.' +
     'This must be the full name of a python module ' +
     '(python must be able to import it)', 'Extensibility'
+)
+
+# SERVER
+Config.define(
+    'MAX_WAIT_SECONDS_BEFORE_SERVER_SHUTDOWN', 0,
+    'The amount of time to wait before shutting down the server, i.e. stop accepting requests.', 'Server'
+)
+Config.define(
+    'MAX_WAIT_SECONDS_BEFORE_IO_SHUTDOWN', 0,
+    'The amount of time to waut before shutting down all io, after the server has been stopped', 'Server'
 )
 
 Config.define(

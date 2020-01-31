@@ -292,7 +292,11 @@ class BaseEngine(object):
             exif_dict = self._get_exif_segment()
             if exif_dict and piexif.ImageIFD.Orientation in exif_dict["0th"]:
                 exif_dict["0th"][piexif.ImageIFD.Orientation] = 1
-                self.exif = piexif.dump(exif_dict)
+                try:
+                    self.exif = piexif.dump(exif_dict)
+                except Exception as e:
+                    msg = """[piexif] %s""" % e
+                    logger.error(msg)
 
     def gen_image(self, size, color):
         raise NotImplementedError()
@@ -364,5 +368,13 @@ class BaseEngine(object):
     def extract_cover(self):
         raise NotImplementedError()
 
+    def has_transparency(self):
+        raise NotImplementedError()
+
     def cleanup(self):
         pass
+
+    def can_auto_convert_png_to_jpg(self):
+        can_convert = (self.extension == '.png' and not self.has_transparency())
+
+        return can_convert

@@ -135,7 +135,7 @@ class Filter(BaseFilter):
         self.callback()
 
     def on_fetch_done(self, result):
-        if not result.successful:
+        if isinstance(result, LoaderResult) and not result.successful:
             logger.warn(
                 'bad watermark result error=%s metadata=%s' %
                 (result.error, result.metadata)
@@ -147,8 +147,7 @@ class Filter(BaseFilter):
         else:
             buffer = result
 
-        self.watermark_engine.load(buffer, None)
-        self.storage.put(self.url, self.watermark_engine.read())
+        self.storage.put(self.url, buffer)
         self.storage.put_crypto(self.url)
         self.on_image_ready(buffer)
 

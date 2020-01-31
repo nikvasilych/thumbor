@@ -7,7 +7,6 @@ python:
 cache:
   pip: true
   apt: true
-sudo: required
 matrix:
   fast_finish: true
   allow_failures:
@@ -27,6 +26,8 @@ env:
   - UNIT_TEST=1
 addons:
   apt:
+    sources:
+    - trusty-media
     packages:
     - libjpeg-progs
     - libimage-exiftool-perl
@@ -35,14 +36,11 @@ addons:
     - scons
     - libboost-python-dev
     - libexiv2-dev
-before_install:
-  - echo "deb http://archive.ubuntu.com/ubuntu zesty main universe" | sudo tee --append /etc/apt/sources.list
-  - sudo apt-get update
-  - sudo apt-get install ffmpeg -y -f
+    - ffmpeg
 install:
   - pip install --upgrade pip
   - pip install -I https://github.com/escaped/pyexiv2/archive/69dd6448f9831bd826137b7519f9d797b23ab4ec.zip
-  - cd $TRAVIS_BUILD_DIR && make setup
+  - cd $TRAVIS_BUILD_DIR && make setup_python
   - pip install coveralls
 before_script:
   - cd $TRAVIS_BUILD_DIR && make redis
