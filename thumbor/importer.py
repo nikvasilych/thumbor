@@ -31,6 +31,7 @@ class Importer:
         self.loader = None
         self.url_signer = None
         self.upload_photo_storage = None
+        self.watermark_storage = None
         self.storage = None
         self.metrics = None
         self.result_storage = None
@@ -63,6 +64,9 @@ class Importer:
 
         if self.config.UPLOAD_PHOTO_STORAGE:
             self.import_item('UPLOAD_PHOTO_STORAGE', 'Storage')
+
+        if self.config.WATERMARK_STORAGE:
+            self.import_item('WATERMARK_STORAGE', 'Storage')
 
         if self.config.USE_CUSTOM_ERROR_HANDLING:
             self.import_item('ERROR_HANDLER_MODULE', 'ErrorHandler')

@@ -242,6 +242,10 @@ class ContextImporter:
         if importer.upload_photo_storage:
             self.upload_photo_storage = importer.upload_photo_storage(context)
 
+        self.watermark_storage = None
+        if importer.watermark_storage:
+            self.watermark_storage = importer.watermark_storage(context)
+
         self.loader = importer.loader
         self.detectors = importer.detectors
         self.filters = importer.filters

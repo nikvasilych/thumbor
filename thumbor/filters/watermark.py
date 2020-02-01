@@ -19,6 +19,37 @@ import re
 
 class Filter(BaseFilter):
 
+    def __init__(self, *args, **kwargs):
+        super(Filter, self).__init__(*args, **kwargs)
+        self.params = self.update_params(self.params)
+
+
+    def update_params(self, params):
+        if not params:
+            params = self.get_default_params('default')
+        else:
+            url, x, y, o, wr, hr = list(params) + [None] * (6 - len(params))
+            _params = self.get_default_params(url)
+            if _params:
+                _url, _x, _y, _o, _wr, _hr = list(_params) + [None] * (6 - len(_params))
+                if _url:
+                    url = _url
+                if not x:
+                    x = _x
+                if not y:
+                    y = _y
+                if not o:
+                    o = _o
+                if not wr:
+                    wr = _wr or 'none'
+                if not hr:
+                    hr = _hr or 'none'
+            params = url, x, y, o, wr, hr
+        return params
+
+    def get_default_params(self, key):
+        return self.context.config.get('WATERMARKS').get(key, None)
+
     @staticmethod
     def detect_and_get_ratio_position(pos, length):
         match = re.match('^(-?)([0-9]+)p$', pos)
@@ -172,13 +203,17 @@ class Filter(BaseFilter):
         self.watermark_engine = self.context.modules.engine.__class__(self.context)
         self.storage = self.context.modules.storage
 
-        try:
-            buffer = yield tornado.gen.maybe_future(self.storage.get(self.url))
-            if buffer is not None:
-                self.on_image_ready(buffer)
-            else:
-                self.context.modules.loader.load(self.context, self.url, self.on_fetch_done)
-        except Exception as e:
-            logger.exception(e)
-            logger.warn("bad watermark")
-            raise tornado.web.HTTPError(500)
+        buffer = yield tornado.gen.maybe_future(self.context.modules.watermark_storage.get(self.url))
+        if buffer is not None:
+            self.on_image_ready(buffer)
+        else:
+            try:
+                buffer = yield tornado.gen.maybe_future(self.storage.get(self.url))
+                if buffer is not None:
+                    self.on_image_ready(buffer)
+                else:
+                    self.context.modules.loader.load(self.context, self.url, self.on_fetch_done)
+            except Exception as e:
+                logger.exception(e)
+                logger.warn("bad watermark")
+                raise tornado.web.HTTPError(500)
